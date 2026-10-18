@@ -35,6 +35,8 @@ python -m bot backtest
 python -m bot backtest --start 2025-04-01 --save   # writes results/
 ```
 
+`compare` also applies the risk-adjusted gate to every result. Because the bot holds at most 20% of its money in a coin, it is not expected to out-earn holding in a rally. Instead, to pass it must be profitable, have a higher Sharpe ratio and a smaller worst drop than holding the coin, and make at least 30 trades. Settings are frozen before a gate run, and coins the strategy was never tuned on (e.g. `--symbols SOL/USDT XRP/USDT BNB/USDT ADA/USDT`) are the fairest test.
+
 The backtest prints net return, buy-and-hold return, max drawdown, Sharpe ratio, trade count, win rate and fees paid. Change settings only by looking at the tuning period; the test period is the honest check, and every look at it makes it a little less honest.
 
 ## How it works

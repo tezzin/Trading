@@ -10,6 +10,7 @@ import pandas as pd
 
 from .backtest import build_signals, run_backtest
 from .config import load_config
+from .metrics import gate_failures
 from .data import candle_path, fetch_ohlcv, load_candles, save_candles
 
 
@@ -61,21 +62,33 @@ def cmd_compare(args, cfg) -> None:
         "breakout + ML": replace(cfg, strategy=replace(cfg.strategy, name="breakout"),
                                  ml=replace(cfg.ml, enabled=True)),
     }
-    cols = ["total_return_pct", "buy_and_hold_pct", "max_drawdown_pct", "sharpe", "trades",
-            "win_rate_pct", "fees_paid"]
-    for symbol in args.symbols or cfg.symbols:
+    cols = ["total_return_pct", "buy_and_hold_pct", "sharpe", "hold_sharpe", "max_drawdown_pct",
+            "hold_max_drawdown_pct", "trades"]
+    passes: dict[str, list[str]] = {name: [] for name in variants}
+    symbols = args.symbols or cfg.symbols
+    for symbol in symbols:
         full = load_or_exit(symbol, cfg.timeframe)
         rows = []
         for name, vcfg in variants.items():
             signals = build_signals(full, vcfg)
             for period, df in (("tuning", full[full.index < split]), ("test", full[full.index >= split])):
+                if len(df) < 2:
+                    continue
                 result = run_backtest(df, vcfg, signals)
-                halted = "yes" if any("kill switch" in e for e in result.risk_events) else ""
+                failures = gate_failures(result.stats)
+                if period == "test" and not failures:
+                    passes[name].append(symbol)
                 rows.append({"period": period, "strategy": name,
-                             **{c: result.stats[c] for c in cols}, "kill_switch": halted})
+                             **{c: result.stats[c] for c in cols},
+                             "kill_switch": "yes" if any("kill switch" in e for e in result.risk_events) else "",
+                             "gate": "PASS" if not failures else "; ".join(failures)})
         table = pd.DataFrame(rows).sort_values(["period", "strategy"], ascending=[False, True])
         print(f"\n== {symbol} {cfg.timeframe}, test period from {args.split} ==")
         print(table.to_string(index=False))
+
+    print(f"\nRisk-adjusted gate, test period ({len(symbols)} coins):")
+    for name, ok in passes.items():
+        print(f"  {name}: passes on {len(ok)} of {len(symbols)}" + (f" ({', '.join(ok)})" if ok else ""))
 
 
 def main() -> None:
