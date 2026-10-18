@@ -9,11 +9,28 @@ import yaml
 
 @dataclass
 class StrategyConfig:
+    name: str = "breakout"       # "breakout" or "ma_cross" (the Phase 1 baseline)
+    # breakout
+    entry_period: int = 55       # enter on a close above the highest high of this many candles
+    exit_period: int = 20        # exit on a close below the lowest low of this many candles
+    trend_period: int = 200      # only enter above this moving average
+    # ma_cross
     fast_period: int = 20
     slow_period: int = 100
+    # both
     atr_period: int = 14
     stop_atr_mult: float = 2.5
     min_atr_pct: float = 0.003
+
+
+@dataclass
+class MLConfig:
+    enabled: bool = False
+    horizon: int = 12            # candles ahead the model predicts
+    min_return: float = 0.01     # a "good" entry gains at least this much over the horizon
+    threshold: float = 0.55      # only enter when the model's probability is at least this
+    retrain_every: int = 180     # candles between retrains (walk-forward)
+    min_train: int = 1000        # candles of history before the first model
 
 
 @dataclass
@@ -36,10 +53,11 @@ class RiskConfig:
 class Config:
     exchange: str = "binance"
     symbols: list[str] = field(default_factory=lambda: ["BTC/USDT", "ETH/USDT"])
-    timeframe: str = "1h"
+    timeframe: str = "4h"
     strategy: StrategyConfig = field(default_factory=StrategyConfig)
     backtest: BacktestConfig = field(default_factory=BacktestConfig)
     risk: RiskConfig = field(default_factory=RiskConfig)
+    ml: MLConfig = field(default_factory=MLConfig)
 
 
 def _build(cls, values: dict | None):
@@ -59,8 +77,9 @@ def load_config(path: str | Path | None = None) -> Config:
     return Config(
         exchange=raw.get("exchange", "binance"),
         symbols=raw.get("symbols", ["BTC/USDT", "ETH/USDT"]),
-        timeframe=raw.get("timeframe", "1h"),
+        timeframe=raw.get("timeframe", "4h"),
         strategy=_build(StrategyConfig, raw.get("strategy")),
         backtest=_build(BacktestConfig, raw.get("backtest")),
         risk=_build(RiskConfig, raw.get("risk")),
+        ml=_build(MLConfig, raw.get("ml")),
     )

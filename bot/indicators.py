@@ -16,3 +16,11 @@ def atr(df: pd.DataFrame, period: int) -> pd.Series:
         axis=1,
     ).max(axis=1)
     return true_range.ewm(alpha=1 / period, min_periods=period, adjust=False).mean()
+
+
+def rsi(series: pd.Series, period: int) -> pd.Series:
+    """Relative Strength Index using Wilder's smoothing."""
+    change = series.diff()
+    gain = change.clip(lower=0).ewm(alpha=1 / period, min_periods=period, adjust=False).mean()
+    loss = (-change.clip(upper=0)).ewm(alpha=1 / period, min_periods=period, adjust=False).mean()
+    return 100 - 100 / (1 + gain / loss)

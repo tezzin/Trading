@@ -14,6 +14,7 @@ import pandas as pd
 
 from .config import Config
 from .metrics import summarize
+from .ml import apply_filter, walk_forward_proba
 from .risk import RiskManager
 from .strategy import generate_signals
 
@@ -26,10 +27,20 @@ class BacktestResult:
     risk_events: list[str] = field(default_factory=list)
 
 
-def run_backtest(df: pd.DataFrame, cfg: Config) -> BacktestResult:
+def build_signals(df: pd.DataFrame, cfg: Config) -> pd.DataFrame:
+    """Strategy signals, filtered by the ML model when it is enabled."""
+    signals = generate_signals(df, cfg.strategy)
+    if cfg.ml.enabled:
+        signals = apply_filter(signals, walk_forward_proba(df, cfg.ml), cfg.ml.threshold)
+    return signals
+
+
+def run_backtest(df: pd.DataFrame, cfg: Config, signals: pd.DataFrame | None = None) -> BacktestResult:
+    """Backtest `df`. Pass `signals` computed on a longer history to keep indicator
+    warm-up and ML training data from before the tested period."""
     if len(df) < 2:
         raise ValueError("Need at least 2 candles to backtest")
-    signals = generate_signals(df, cfg.strategy)
+    signals = build_signals(df, cfg) if signals is None else signals.loc[df.index]
     bt, risk = cfg.backtest, RiskManager(cfg.risk)
     fee, slip = bt.fee_rate, bt.slippage
 

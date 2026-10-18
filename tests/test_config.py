@@ -30,3 +30,15 @@ def test_candles_survive_save_and_load(tmp_path, random_walk):
     save_candles(random_walk, path)
     loaded = load_candles(path)
     pd.testing.assert_frame_equal(loaded, random_walk, check_freq=False, check_index_type=False)
+
+
+def test_gate_judges_risk_not_raw_return():
+    from bot.metrics import gate_failures
+
+    base = {"total_return_pct": 8.0, "buy_and_hold_pct": 40.0, "sharpe": 1.2, "hold_sharpe": 0.9,
+            "max_drawdown_pct": -9.0, "hold_max_drawdown_pct": -30.0, "trades": 45}
+    assert gate_failures(base) == []  # lower return than holding is fine if risk-adjusted is better
+    assert gate_failures({**base, "sharpe": 0.8}) == ["Sharpe not above holding"]
+    assert gate_failures({**base, "max_drawdown_pct": -35.0}) == ["drawdown not smaller than holding"]
+    assert gate_failures({**base, "trades": 10}) == ["fewer than 30 trades"]
+    assert gate_failures({**base, "total_return_pct": -1.0}) == ["not profitable"]

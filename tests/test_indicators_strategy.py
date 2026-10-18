@@ -20,6 +20,6 @@ def test_signals_ignore_future_candles(random_walk):
 
 
 def test_no_signal_before_indicators_are_ready(random_walk):
-    cfg = StrategyConfig(slow_period=100)
+    cfg = StrategyConfig(name="ma_cross", slow_period=100)
     signals = generate_signals(random_walk, cfg)
     assert (signals["signal"].iloc[:99] == 0).all()
