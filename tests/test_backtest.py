@@ -6,7 +6,7 @@ from bot.backtest import run_backtest
 from bot.config import BacktestConfig, Config, RiskConfig, StrategyConfig
 from tests.conftest import make_candles
 
-FAST = StrategyConfig(fast_period=3, slow_period=6, atr_period=3, stop_atr_mult=2.0, min_atr_pct=0.0)
+FAST = StrategyConfig(name="ma_cross", fast_period=3, slow_period=6, atr_period=3, stop_atr_mult=2.0, min_atr_pct=0.0)
 
 
 def config(**backtest):

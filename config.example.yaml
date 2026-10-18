@@ -1,11 +1,15 @@
 # Copy to config.yaml and adjust. Values below are the plan's starting limits.
 exchange: binance
 symbols: [BTC/USDT, ETH/USDT]
-timeframe: 1h
+timeframe: 4h           # slower candles = fewer trades and fees
 
 strategy:
-  fast_period: 20        # fast moving average (candles)
-  slow_period: 100       # slow moving average (candles)
+  name: breakout         # breakout, or ma_cross (the Phase 1 baseline)
+  entry_period: 55       # breakout: enter on a close above the highest high of 55 candles
+  exit_period: 20        # breakout: exit on a close below the lowest low of 20 candles
+  trend_period: 200      # breakout: only enter above the 200-candle average
+  fast_period: 20        # ma_cross: fast moving average (candles)
+  slow_period: 100       # ma_cross: slow moving average (candles)
   atr_period: 14
   stop_atr_mult: 2.5     # stop-loss distance = ATR x this
   min_atr_pct: 0.003     # skip entries when volatility is too low to beat fees
@@ -21,3 +25,11 @@ risk:
   daily_loss_limit: 0.03      # no new entries for the rest of the UTC day after -3%
   max_drawdown: 0.15          # close everything and halt after -15% from peak
   max_price_deviation: 0.05   # reject orders priced >5% away from the last price
+
+ml:
+  enabled: false         # true = only take entries the model backs
+  horizon: 12            # predict the next 12 candles (2 days on 4h)
+  min_return: 0.01       # a good entry gains at least 1% over the horizon
+  threshold: 0.55        # minimum model probability to enter
+  retrain_every: 180     # retrain every 180 candles (30 days on 4h), on past data only
+  min_train: 1000        # candles of history before the first model

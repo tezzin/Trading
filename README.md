@@ -24,20 +24,26 @@ Phase 1 needs no API keys: candle history is public.
 ## Use
 
 ```bash
-# Download hourly BTC/USDT and ETH/USDT candles from Binance into data/
+# Download 4-hour BTC/USDT and ETH/USDT candles from Binance into data/
 python -m bot download --since 2021-01-01
 
-# Backtest everything, or a period you held back for testing
+# Compare every strategy on the tuning period and the held-out test period
+python -m bot compare --split 2025-04-01
+
+# Backtest the configured strategy, or only a period you held back for testing
 python -m bot backtest
-python -m bot backtest --start 2024-01-01 --save   # writes results/
+python -m bot backtest --start 2025-04-01 --save   # writes results/
 ```
 
-The backtest prints net return, buy-and-hold return, max drawdown, Sharpe ratio, trade count, win rate and fees paid.
+The backtest prints net return, buy-and-hold return, max drawdown, Sharpe ratio, trade count, win rate and fees paid. Change settings only by looking at the tuning period; the test period is the honest check, and every look at it makes it a little less honest.
 
 ## How it works
 
 - `bot/data.py` pages through candle history with [ccxt](https://github.com/ccxt/ccxt) and stores it as CSV.
-- `bot/strategy.py` is the baseline: long when the 20-candle average is above the 100-candle average and volatility (ATR) is high enough to beat fees; flat when the trend flips. Stop-loss at 2.5 x ATR below entry.
+- `bot/strategy.py` has two rule-based strategies, both with a stop-loss 2.5 x ATR below entry:
+  - `breakout` (default): buy when the close breaks the highest high of the last 55 candles while above the 200-candle average; sell when it breaks the lowest low of the last 20. It trades rarely, so fees take less.
+  - `ma_cross`: the Phase 1 baseline, long while the 20-candle average is above the 100-candle average. It lost to buy-and-hold on real 2021-2026 data.
+- `bot/ml.py` is an optional filter (`ml.enabled: true`). A gradient-boosted model estimates the chance that an entry gains 1% within 12 candles, and entries below 55% are skipped. It is retrained every 180 candles on past data only (walk-forward), so it never sees the future.
 - `bot/risk.py` approves and sizes every entry: 1% of equity at risk per trade, max 20% of equity per coin, no new entries after a 3% daily loss, and a permanent halt (close everything) after a 15% drop from peak.
 - `bot/backtest.py` replays candles one at a time. Signals use a candle's close and fill at the next candle's open, every fill pays 0.1% fee plus 0.05% slippage, and stops that gap fill at the open price.
 
