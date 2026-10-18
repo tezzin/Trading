@@ -1,0 +1,23 @@
+# Copy to config.yaml and adjust. Values below are the plan's starting limits.
+exchange: binance
+symbols: [BTC/USDT, ETH/USDT]
+timeframe: 1h
+
+strategy:
+  fast_period: 20        # fast moving average (candles)
+  slow_period: 100       # slow moving average (candles)
+  atr_period: 14
+  stop_atr_mult: 2.5     # stop-loss distance = ATR x this
+  min_atr_pct: 0.003     # skip entries when volatility is too low to beat fees
+
+backtest:
+  starting_balance: 500  # USDT
+  fee_rate: 0.001        # 0.1% per side (Binance spot taker)
+  slippage: 0.0005       # 0.05% per fill
+
+risk:
+  risk_per_trade: 0.01        # 1% of equity between entry and stop
+  max_position_pct: 0.20      # max 20% of equity in one coin
+  daily_loss_limit: 0.03      # no new entries for the rest of the UTC day after -3%
+  max_drawdown: 0.15          # close everything and halt after -15% from peak
+  max_price_deviation: 0.05   # reject orders priced >5% away from the last price
